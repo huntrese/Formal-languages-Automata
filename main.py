@@ -1,5 +1,8 @@
 import numpy as np
 import grammarHelper
+from automata import FiniteAutomaton
+import networkx as nx
+import matplotlib.pyplot as plt
 
 class Language():
     rules = {}
@@ -59,3 +62,15 @@ lang.generate_word(5)
 print(lang.words)
 print(lang.VN)
 print(lang.VT)
+
+fa = FiniteAutomaton(rules)
+
+
+
+input_string = "ab"
+if fa.can_generate(input_string):
+    print(f"The string '{input_string}' can be obtained from the grammar.")
+else:
+    print(f"The string '{input_string}' cannot be obtained from the grammar.")
+
+fa.getAutomata()
