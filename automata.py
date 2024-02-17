@@ -57,28 +57,28 @@ class FiniteAutomaton:
                             node_colors.append("lightblue")
 
                         
-                        if G.has_edge(f'q_{used_keys[char]}',f'q_{used_keys[node]}'):
-                            existing = G.get_edge_data(f'q_{used_keys[char]}',f'q_{used_keys[node]}')
-                            G.add_weighted_edges_from([(f'q_{used_keys[node]}', f'q_{used_keys[char]}',f"{existing['weight']} \n{edge}")])
+                        if G.has_edge(f'{char}',f'{node}'):
+                            existing = G.get_edge_data(f'{char}',f'{node}')
+                            G.add_weighted_edges_from([(f'{node}', f'{char}',f"{existing['weight']} \n{edge}")])
                         else:
-                            G.add_edge(f'q_{used_keys[node]}', f'q_{used_keys[char]}',weight=edge)
+                            G.add_edge(f'{node}', f'{char}',weight=edge)
 
 
                 else:
                     if edge not in used_keys:
                         used_keys[edge] = n
                         n +=  1
-                    G.add_edge(f'q_{used_keys[node]}', f'q_{used_keys[edge]}',weight=edge)
+                    G.add_edge(f'{node}', f'{edge}',weight=edge)
                     node_colors.append("red")
 
 
-        G.add_edge(" ","q_0")
+        G.add_edge(" ","S")
 
         node_colors.append("white")
 
-        pos = {" ": (-10, 4), "q_0": (-1, 0)}
+        pos = {" ": (-10, 4), "S": (-1, 0)}
 
-        spring_pos = nx.spring_layout(G, pos=pos, k=10,fixed=[" ","q_0"],weight="weights")
+        spring_pos = nx.spring_layout(G, pos=pos, k=10,fixed=[" ","S"],weight="weights")
 
         pos.update(spring_pos)
 
