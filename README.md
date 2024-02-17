@@ -336,6 +336,7 @@ else:
 fa.getAutomata()
 ```
 Running this code allows us to check all of the functionalities of the class: checking if a given string can be reached via the automata and the graphic representation of the automata:
+
 ![Figure_1](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/0faa2a89-fd34-46b6-a81a-d6cd92eb3aa8)
 
 
