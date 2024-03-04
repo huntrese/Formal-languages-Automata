@@ -1,39 +1,25 @@
-#  Intro to formal languages. Regular grammars. Finite Automata.
+# Topic: Determinism in Finite Automata. Conversion from NDFA 2 DFA. Chomsky Hierarchy.
 
 ### Course: Formal Languages & Finite Automata
-### Author: Polisciuc Vlad (FAF-223)
-
-----
+### Author: Cretu Dumitru and kudos to the Vasile Drumea with Irina Cojuhari
 
 ## Theory
-In the realm of formal language theory, regular grammars and finite automata serve as fundamental constructs for modeling and analyzing the properties of languages. Regular grammars, are characterized by a set of production rules typically in the form of productions of the type 
-A -> aB or A -> a, 
-where A and B are non-terminals, and a is a string of terminals. These grammars generate languages that can be recognized by deterministic finite automata (DFAs) or nondeterministic finite automata (NFAs). Finite automata, in turn, are abstract machines consisting of a finite set of states, transitions between states governed by input symbols, an initial state, and one or more accepting states. A transition between the 2 can be easily made and reverted if needed, these changes do not affect the grammar of the language
+
+A finite automaton, akin to a state machine, represents processes with a defined start and end state, highlighting its deterministic nature. Non-determinism arises when a single transition can lead to multiple states, complicating the predictability of the system. Despite this, automata can be categorized as deterministic or non-deterministic, and through specific algorithms, determinism can be achieved by modifying the automaton's structure. This will be fursther explored in this laboratory work
 
 ## Objectives:
 
-For the Grammar: 
-```
-Variant 20:
-VN={S, A, B, C},
-VT={a, b, c, d}, 
-P={ 
-    S → dA     
-    A → d    
-    A → aB   
-    B → bC    
-    C → cA
-    C → aS
-}
-```
+    a. Implement conversion of a finite automaton to a regular grammar.
 
-  a. Implement a type/class for this grammar;
+    b. Determine whether your FA is deterministic or non-deterministic.
 
-  b. Add one function that would generate 5 valid strings from the language expressed by this given grammar;
-
-  c. Implement some functionality that would convert an object of type Grammar to one of type Finite Automaton;
-
-  d. For the Finite Automaton, add a method that checks if an input string can be obtained via the state transition from it;
+    c. Implement some functionality that would convert an NDFA to a DFA.
+    
+    d. Represent the finite automaton graphically (Optional, and can be considered as a __*bonus point*__):
+      
+    - You can use external libraries, tools or APIs to generate the figures/diagrams.
+        
+    - Your program needs to gather and send the data about the automaton and the lib/tool/API return the visual representation.
 
 ## Implementation description
 
@@ -47,10 +33,13 @@ class Language():
     words = []
     VN=[]
     VT=[]
-    def __init__(self,rules,VN,VT):
+    F=[]
+    nfa=False
+    def __init__(self,rules,VN,VT,F):
         self.rules=rules
         self.VN=VN
         self.VT=VT
+        self.F=F
 ```
 
 In order to keep a clean class structure I have created a function that given a grammar input(Ex below), would extract all of the symbols and the necessary rules.
@@ -58,146 +47,61 @@ In order to keep a clean class structure I have created a function that given a 
 import collections
 
 def grammar_to_language(grammar):
+    terminals="abcdefghijklmnoprstqwxyz"
+    nonterminals=terminals.upper()
     lines=grammar.split("\n")
     VN = lines[1].split("=")[1].translate({ord(c): None for c in "{} "}).split(",")[:-1]
     VT = lines[2].split("=")[1].translate({ord(c): None for c in "{} "}).split(",")[:-1]
-    grammar_rules = lines[3:]
+    F = VT
+    is_fa_grammar=0
+    if "F =" in lines[3]:
+        is_fa_grammar=1
+        for i in range(3, len(lines)):
+            line = lines[i]
+            if not line:
+                continue
+            
+            line = line.replace(".","").replace(" ","")
+            line = line[:-1] if line[-1]=="," else line
+            
+            
+            for char in VT:
+                ind=VT.index(char)
+                line = line.replace(VT[ind],terminals[ind])
+            for char in VN:
+                ind=VN.index(char)
+                line = line.replace(VN[ind],nonterminals[ind])
+            
+
+            lines[i] = line
+        for char in VT:
+            ind=VT.index(char)
+            VT[ind]=terminals[ind]
+        for char in VN:
+            ind=VN.index(char)
+            VN[ind]=nonterminals[ind]
+        
+        if "F=" in lines[3]:
+            F_part = lines[3].split("=")[1].strip().replace("{","").replace("}","").split(",")  # Extract the part after "F ="
+
+            F = [char.strip() for char in F_part]        
+
+    grammar_rules = lines[3+is_fa_grammar:]
     rules = collections.defaultdict(list)
 
     for rule in grammar_rules:
+        rule = rule.replace("→","=")
         if rule and "{" not in rule and "}" not in rule:
-            lhs, rhs = rule.split("→")
+            lhs, rhs = rule.split("=")
+            if is_fa_grammar:
+                rhs=lhs.split(",")[1].replace(")","")+rhs
+                lhs=lhs.split(",")[0].replace("δ(","")
             rules[lhs.strip()].append(rhs.strip())
-    print(rules)
-    return rules,VN,VT
+
+    return rules,VN,VT,F
 ```
 Yes the use of the collections library is not necessary, I just like the defaultdict data structure
 
-
-Following the instantiation of the language class I have implemented a method for word generation according to the given rules with S as the starting symbol:
-```
-    def generate_word(self, number):
-        start = self.rules["S"][0]
-        steps = [f"\nS -> {start}"]
-        unique=0
-        while any(c.isupper() for c in start):
-            non_terminals = [i for i, c in enumerate(start) if c.isupper()]
-            for i in non_terminals[::-1]:
-                options = self.rules[start[i]]
-                replacement = np.random.choice(options)
-                start = start[:i] + replacement + start[i + 1 :]
-                steps.append(f" -> {start}")
-
-        if start not in self.words:
-            self.words.append(start)
-            unique=1
-            print("\n".join(steps))
-
-        if number > 0:
-            self.generate_word(number - unique)
-
-```
-
-This makes use of the np.random.choice function that chooses a random element inside a list, this makes sure that we use all the rules without special handling of the recursive situations, as the probability of getting an infinite recursion with this approach is literally 0. 
-if a word has been formed for the first time using this language it is appended to the words attribute of the language object, untill a certain number of unique words has been created, according to the parameter 'number'
-
-
-
-This is an example use case:
-
-```
-grammar="""Variant 20:
-VN={S, A, B, C},
-VT={a, b, c, d}, 
-P={ 
-    S → dA     
-    A → d    
-    A → aB   
-    B → bC    
-    C → cA
-    C → aS
-}
-
-"""
-rules, VN, VT = grammarHelper.grammar_to_language(grammar)
-
-
-
-lang=Language(rules,VN,VT)
-lang.generate_word(5)
-print(lang.words)
-print(lang.VN)
-print(lang.VT)
-
-
-```
-and this is the output:
-```
-
-S -> dA
- -> daB
- -> dabC
- -> dabcA
- -> dabcaB
- -> dabcabC
- -> dabcabcA
- -> dabcabcaB
- -> dabcabcabC
- -> dabcabcabcA
- -> dabcabcabcd
-
-S -> dA
- -> dd
-
-S -> dA
- -> daB
- -> dabC
- -> dabcA
- -> dabcaB
- -> dabcabC
- -> dabcabaS
- -> dabcabadA
- -> dabcabadd
-
-S -> dA
- -> daB
- -> dabC
- -> dabaS
- -> dabadA
- -> dabadaB
- -> dabadabC
- -> dabadabaS
- -> dabadabadA
- -> dabadabadd
-
-S -> dA
- -> daB
- -> dabC
- -> dabcA
- -> dabcaB
- -> dabcabC
- -> dabcabcA
- -> dabcabcd
-
-S -> dA
- -> daB
- -> dabC
- -> dabaS
- -> dabadA
- -> dabadaB
- -> dabadabC
- -> dabadabcA
- -> dabadabcaB
- -> dabadabcabC
- -> dabadabcabaS
- -> dabadabcabadA
- -> dabadabcabadd
-['dabcabcabcd', 'dd', 'dabcabadd', 'dabadabadd', 'dabcabcd', 'dabadabcabadd']
-['S', 'A', 'B', 'C']
-['a', 'b', 'c', 'd']
-```
-
-At the end we can see the full list of the generated words, while above it we can take a look at the way the respective words have been formed.
 
 
 
@@ -210,138 +114,418 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 
 class FiniteAutomaton:
-    def __init__(self, grammar):
+    def __init__(self, grammar, F, initial="S"):
         self.grammar = grammar
         self.transitions = defaultdict(list)
-        self.start_symbol = 'S'
+        self.rules=defaultdict(dict)
+        self.start_symbol = initial
+        self.F=F
+        self.convert()
         self._build_transitions()
 
     def _build_transitions(self):
-        for non_terminal, productions in self.grammar.items():
+        for non_terminal, productions in self.rules.items():
+            # print(non_terminal,productions)
             for production in productions:
-                if len(production) > 1:
-                    self.transitions[non_terminal].append((production[0], production[1:]))
-                else:
-                    self.transitions[non_terminal].append((production,))
+                symbol = productions[production]
+                self.transitions[non_terminal].append((production,symbol))
+
+
+    def convert(self):
+        for state,transition in self.grammar.items():
+            dic={}
+            if type(transition)==list:
+                for choice in transition:
+                    print(choice)
+                    upper = "".join([c for c in choice if c.isupper()])
+                    if not upper:
+                        dic[choice]=[choice]
+                        continue
+                    if choice.replace(upper,"") not in dic: 
+                        dic[choice.replace(upper,"")]=[upper]
+                        continue
+
+                    dic[choice.replace(upper,"")].append(upper)
+                self.rules[state]=dic
+            else:
+                self.rules=self.grammar
 
 ```
-Here, based on the previous grammar helper method that parses the given grammar string into a dictionary of rules a finite automata class has been defined.
-Following that we have the function can_generate that using the can_reach helper method, checks whether or not a given input word can be generated via the finite automatam 
-```
-    def _can_reach(self, state, input_string):
-        if not input_string:
-            return True
-        for transition in self.transitions[state]:
-            if transition[0] == input_string[0]:
-                if self._can_reach(transition[-1], input_string[1:]):
-                    return True
-        return False
+Here, based on the previous grammar helper method that parses the given grammar string into a dictionary of rules a finite automata class has been defined. The additionalconvert method allows for the translation between the project structure used in the first laboratory to the second one, therefore the code as of this moment is perfectly compatible with old versions.
 
-    def can_generate(self, input_string):
-        return self._can_reach(self.start_symbol, input_string)
+Following that we have the nfa to dfa detemrminer and convertor:
 ```
-Next we have the get_automata function that generates a graph using networkx for the given finiteAutomata. the red vertexes represent terminal states, and the purple ones are Non terminal.
+def which_type(lang):
+    for lhs in lang.rules.keys():
+        lhs_lower=[]
+        for rhs in lang.rules[lhs]:
+            lower=[c for c in rhs if c.islower()]
+            lhs_lower.append(''.join(lower))
+        if len(lhs_lower)!=len(set(lhs_lower)):
+            lang.nfa=True
+
+    if lang.nfa:
+        print("This automata is a NFA!")
+    else:
+        print("This automata is a DFA!")
+```
+this checks if there is any ambiguity in the available choices and prints that the automata is an NFA if so.
+
+Then there is the actual convertor and its helper function:
+```
+def convert_dfa(dfa):
+    converted_dfa = {}
+    for state, transitions in dfa.items():
+        converted_transitions = []
+        for symbol, next_state in transitions.items():
+            converted_transitions.append(symbol + next_state)
+        converted_dfa[state] = converted_transitions
+    return converted_dfa
+
+def convert_nfa_to_dfa(lang):
+    dic = {}
+   
+    for lhs, rhs in lang.rules.items():
+        for choice in rhs:
+            upper = ""
+            for c in choice:
+                upper += c if c.isupper() else ""
+            lower = ""
+            for c in upper:
+                lower += choice.replace(c, "")
+            
+            if lhs not in dic:
+                dic[lhs] = {}
+            if lower in dic[lhs]:
+                dic[lhs][lower] += upper
+                continue
+            dic[lhs][lower] = upper
+    dfa={}
+    queue = [{'A'}]  # Start with the initial state
+    visited = set()
+
+    while queue:
+        current_states = queue.pop(0)
+        current_states_str = ''.join(sorted(current_states))
+        if current_states_str in visited:
+            continue
+        visited.add(current_states_str)
+        dfa[current_states_str] = {}
+        dfa_state = {}
+        
+        for state in current_states:
+            if state in dic:
+                for symbol, next_state in dic[state].items():
+                    if symbol not in dfa_state:
+                        dfa_state[symbol] = next_state
+                    else:
+                        dfa_state[symbol] += next_state
+
+        for symbol, next_states in dfa_state.items():
+            next_state_set = ''.join(sorted(set(next_states)))
+            dfa[current_states_str][symbol] = next_state_set
+            if next_state_set not in visited:
+                queue.append(next_state_set)
+    
+
+    formatted_dfa = convert_dfa(dfa)
+    return dfa
+```
+
+The convert_Dfa function just helps with formating the actual state of the graph representation, and the convert_nfa_to_dfa function does all the actual converting to a DFA
+
+Next we have the get_automata function that generates a graph using networkx for the given finiteAutomata. the red vertexes represent terminal states, and the skyblue ones are Non terminal.
 The respective states are connected to each other via transitions
 ```
-def getAutomata(self):
-        
-        rules=self.grammar
+def getAutomata(self,title):
+        initial=self.start_symbol
         G = nx.DiGraph()
-        n=0
-        used_keys={}
-        node_colors=[]
+        edge_list = []
+        node_colors = {}
+
+        for node, edges in self.transitions.items():
+            print(node,edges)
+            if any(final in node for final in self.F):
+                node_colors[node]="red"
+            else:
+                node_colors[node]="skyblue"
+            
+            for edge in edges:
+                if type(edge[1]) == str:
+                    G.add_edge(node, edge[1], label=edge[0])
+                    edge_list.append(edge[0])
+                    if any(final in edge[1] for final in self.F):
+                        node_colors[edge[1]]="red"
+                    else:
+                        node_colors[edge[1]]="skyblue"
+                    continue
+
+                for choice in edge[1]:
+                    G.add_edge(node, choice, label=edge[0])
+                    edge_list.append(edge[0])
+
+                    if any(final in choice for final in self.F):
+                        node_colors[choice]="red"
+                    else:
+                        node_colors[choice]="skyblue"
+                
+
+        node_colors = node_colors.values()
+        pos = nx.spring_layout(G)
+
+        nx.draw(G, pos, with_labels=True, node_color=node_colors, font_size=12, font_weight="bold")
+        for i,edge in enumerate(G.edges()):
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            x, y = (x0 + x1) / 2, (y0 + y1) / 2
+                        
+            x -= 0.02
+            y += 0.08
 
             
+            plt.text(x, y, edge_list[i], bbox=dict(facecolor='white', alpha=0.5), horizontalalignment='center')
+        for i,node in enumerate(G.nodes()):
+            if initial in node:
+                x, y = pos[node]
+                plt.annotate("", xy=(x, y), xytext=(x-20, y-20),
+                 textcoords="offset points", ha="center", va="center",
+                 arrowprops=dict(arrowstyle="->", linewidth=2))
 
-        for node, edges in rules.items():
-            if node not in used_keys:
-                used_keys[node] = n
-                n +=  1
-                node_colors.append("lightblue")
-
-            for edge in edges:
-                uppercase = [x for x in edge if x.isupper()]
-
-                if uppercase:
-                    for char in uppercase:
-                        if char not in used_keys:
-                            used_keys[char] = n
-                            n +=  1
-                            node_colors.append("lightblue")
-
-                        
-                        if G.has_edge(f'{char}',f'{node}'):
-                            existing = G.get_edge_data(f'{char}',f'{node}')
-                            G.add_weighted_edges_from([(f'{node}', f'{char}',f"{existing['weight']} \n{edge}")])
-                        else:
-                            G.add_edge(f'{node}', f'{char}',weight=edge)
-
-
-                else:
-                    if edge not in used_keys:
-                        used_keys[edge] = n
-                        n +=  1
-                    G.add_edge(f'{node}', f'{edge}',weight=edge)
-                    node_colors.append("red")
-
-
-        G.add_edge(" ","S")
-
-        node_colors.append("white")
-
-        pos = {" ": (-10, 4), "S": (-1, 0)}
-
-        spring_pos = nx.spring_layout(G, pos=pos, k=10,fixed=[" ","S"],weight="weights")
-
-        pos.update(spring_pos)
-
-        for node in pos:
-            pos[node] = [pos[node][0] * 2, pos[node][1] * 2]
-
-        weights = nx.get_edge_attributes(G, 'weight')
-        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=1500)
-        nx.draw_networkx_edges(G, pos, node_size=1500)
-        nx.draw_networkx_labels(G, pos, font_weight='bold', font_size=12)
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=weights)
+        
+        man = plt.get_current_fig_manager()
+        man.set_window_title(title)
         plt.show()
 
 ```
+
+You might notice the extensive used of the separate matplotlib functions, that is due to the limitations of networkx in regards to the placement of edge labels in relation to the actual edges.
+
+
 This is an example usage:
 ```
-grammar="""Variant 20:
-VN={S, A, B, C},
-VT={a, b, c, d}, 
-P={ 
-    S → dA     
-    A → d    
-    A → aB   
-    B → bC    
-    C → cA
-    C → aS
-}
 
+condition="""Variant 28
+Q = {q0,q1,q2,q3},
+∑ = {a,b,c},
+F = {q3},
+δ(q0,a) = q0,
+δ(q0,a) = q1,
+δ(q1,a) = q1,
+δ(q1,c) = q2,
+δ(q1,b) = q3,
+δ(q0,b) = q2,
+δ(q2,b) = q3.
 """
-rules, VN, VT = grammarHelper.grammar_to_language(grammar)
-
-fa = FiniteAutomaton(rules)
+rules, VN, VT, F = grammarHelper.grammar_to_language(condition)
 
 
 
-input_string = "ab"
-if fa.can_generate(input_string):
-    print(f"The string '{input_string}' can be obtained from the grammar.")
-else:
-    print(f"The string '{input_string}' cannot be obtained from the grammar.")
+lang=language.Language(rules,VN,VT,F)
 
-fa.getAutomata()
+fa= FiniteAutomaton(rules,F=lang.F,initial='A')
+fa.getAutomata("FA for language(NFA/DFA)")
+dfa_rules=nfa_dfa.convert_nfa_to_dfa(lang)
+dfa = FiniteAutomaton(dfa_rules,F=lang.F,initial='A')
+dfa.getAutomata("FA for language, DFA")
 ```
-Running this code allows us to check all of the functionalities of the class: checking if a given string can be reached via the automata and the graphic representation of the automata:
 
-![Figure_1](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/0faa2a89-fd34-46b6-a81a-d6cd92eb3aa8)
+This is the graph output of the program:
+
+![NFA_DFA](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/adafbf91-750c-49cf-8547-1da7cf5fe22a)
+
+In the figure above we have the pure untouched graph of the automata described in the condition
+
+```
+condition="""Variant 28
+Q = {q0,q1,q2,q3},
+∑ = {a,b,c},
+F = {q3},
+δ(q0,a) = q0,
+δ(q0,a) = q1,
+δ(q1,a) = q1,
+δ(q1,c) = q2,
+δ(q1,b) = q3,
+δ(q0,b) = q2,
+δ(q2,b) = q3.
+"""
+```
 
 
+![DFA](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/06499675-5602-45ed-9711-cb2749c830be)
+
+And in this picture is illustrated the DFA-Converted FA, after all the computations.
+
+As for the cpnsole output, besides the word generation and checking if an word can be generated via the given FA we have the NFA/DFA Decider
+this is its result:
+```
+This automata is a NFA!
+```
+The input automata describes an NFA
+
+Now let us discuss the chomsky classification of grammars. Here is my implementation of the classification method in the FiniteAutomata Class
+```
+    def clasify(self):
+        global_tier=3
+        for non_terminal, productions in self.grammar.items():
+
+            for production in productions:
+                tier=3
+
+                elements = [char for choice in production for char in choice]
+
+                terminals = [x for x in elements if x.islower()]
+
+                non_terminals = [x for x in elements if x.isupper()]
+
+                
+                elements_lhs = [char for choice in non_terminal for char in choice]
+                non_terminals_lhs = [x for x in elements_lhs if x.isupper()]
+
+                tier = 2 if (len(non_terminals) > 1 or len(terminals) > 1) else tier
+                tier = 1 if len(non_terminals_lhs)>1 else tier
+                tier = 0 if non_terminals_lhs == [] else tier
+
+                global_tier=min(global_tier,tier)
+        return global_tier
+```
+The code was developed in great part using this as basis:
+
+![uEufx](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/f88a2334-0577-4946-8be1-32fb95732a00)
+
+in order to make sure that this properly works, I have set up the following testing suite:
+```
+import automata
+import grammarHelper
+tests = [
+    {
+        "grammar": """Variant 21:
+        VN={S, B, C, D},
+        VT={a, b, c}, 
+        P={ 
+            S → aB     
+            B → bS    
+            B → aC   
+            B → b    
+            C → bD   
+            D → a    
+            D → bC
+            D → cS
+        }
+
+        """,
+        "expected_tier": 3  # Expected tier level for this grammar
+    },
+    {
+        "grammar": """Variant 21:
+        VN={S, A, B},
+            VT={a, b},
+            P={
+                S → aS
+                S → A
+                A → bB
+                B → a
+                B → b
+            }
+        """,
+        "expected_tier": 3  # Expected tier level for this grammar
+    },
+    {
+        "grammar": """Variant 21:
+        VN={S, A, B, C},
+            VT={a, b},
+            P={
+                S → aA
+                A → bB
+                A → B
+                B → aC
+                C → b
+            }
+        """,
+        "expected_tier": 3  # Expected tier level for this grammar
+    },
+    {
+        "grammar": """Variant 21:
+        VN={X, Y},
+            VT={e, a, b},
+            P={
+                X → e 
+                X → a 
+                X → aY
+                Y → b 
+            }
+        """,
+        "expected_tier": 3  # Expected tier level for this grammar
+    },
+    {
+        "grammar": """Variant 21:
+        VN={S, X},
+            VT={e, a, b, c},
+            P={
+                S → Xa 
+                X → a 
+                X → aX 
+                X → abc 
+                X → e
+            }
+        """,
+        "expected_tier": 2  # Expected tier level for this grammar
+    },{
+        "grammar": """Variant 21:
+        VN={A, B},
+            VT={a, b, c},
+            P={
+                AB → AbBc 
+                A → bcA 
+                B → b 
+            }
+        """,
+        "expected_tier": 1  # Expected tier level for this grammar
+    },{
+        "grammar": """Variant 21:
+        VN={A, B},
+            VT={a, b, c},
+            P={
+                S → ACaB 
+                Bc → acB 
+                CB → DB 
+                aD → Db 
+            }
+        """,
+        "expected_tier": 1  # Expected tier level for this grammar
+    },
+    
+    ]
+
+for test in tests:
+    grammar = test["grammar"].strip()
+    expected_tier = test["expected_tier"]
+    rules, VN, VT, F = grammarHelper.grammar_to_language(grammar)
+    fa = automata.FiniteAutomaton(rules, F)
+    actual_tier = fa.clasify()
+    result= actual_tier == expected_tier
+    if not result:
+        print(f"XXXX - Test failed: Expected tier {expected_tier}, got {actual_tier}")
+    else :
+        print(f"       Test completed: Expected tier {expected_tier}, got {actual_tier}")
+
+```
+
+And this is the output:
+```
+       Test completed: Expected tier 3, got 3
+       Test completed: Expected tier 3, got 3
+       Test completed: Expected tier 3, got 3
+       Test completed: Expected tier 3, got 3
+       Test completed: Expected tier 2, got 2
+       Test completed: Expected tier 1, got 1
+       Test completed: Expected tier 1, got 1
+```
+
+Since all tests randomly found on the internet have succeded I dare say that the condition has been achieved and My algorithm can Classify grammars using the Chomsky classification
 ## Conclusions 
-In the end we have managed to generate a language and a finite automata based on a given grammar, the language can create different words based on the grammar, which has been confirmed via the finita automata checking. Furthermore we have created a visual representation of he automaton to help illustrate the result.
+In the end we have managed to determine if a Finite Automata is Deterministic or Nondeterministic and Classify it according to Chomsky's rules. Following that We have developed an algorithm to transform an NFA into a DFA, by getting rid of all ambiguities. These processes have been illustrated above via pictures and examples.
 
 ## References
-Documentation of networkx
+Documentation of networkx again
+[Difference between Type 0 and Type 1 in the Chomsky Hierarchy](https://linguistics.stackexchange.com/questions/20237/difference-between-type-0-and-type-1-in-the-chomsky-hierarchy)
+

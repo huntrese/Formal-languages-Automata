@@ -103,8 +103,8 @@ tests = [
 for test in tests:
     grammar = test["grammar"].strip()
     expected_tier = test["expected_tier"]
-    rules, VN, VT = grammarHelper.grammar_to_language(grammar)
-    fa = automata.FiniteAutomaton(rules)
+    rules, VN, VT, F = grammarHelper.grammar_to_language(grammar)
+    fa = automata.FiniteAutomaton(rules, F)
     actual_tier = fa.clasify()
     result= actual_tier == expected_tier
     if not result:

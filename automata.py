@@ -25,7 +25,7 @@ class FiniteAutomaton:
             dic={}
             if type(transition)==list:
                 for choice in transition:
-                    print(choice)
+                    # print(choice)
                     upper = "".join([c for c in choice if c.isupper()])
                     if not upper:
                         dic[choice]=[choice]
@@ -114,3 +114,27 @@ class FiniteAutomaton:
         man = plt.get_current_fig_manager()
         man.set_window_title(title)
         plt.show()
+
+    def clasify(self):
+        global_tier=3
+        for non_terminal, productions in self.grammar.items():
+
+            for production in productions:
+                tier=3
+
+                elements = [char for choice in production for char in choice]
+
+                terminals = [x for x in elements if x.islower()]
+
+                non_terminals = [x for x in elements if x.isupper()]
+
+                
+                elements_lhs = [char for choice in non_terminal for char in choice]
+                non_terminals_lhs = [x for x in elements_lhs if x.isupper()]
+
+                tier = 2 if (len(non_terminals) > 1 or len(terminals) > 1) else tier
+                tier = 1 if len(non_terminals_lhs)>1 else tier
+                tier = 0 if non_terminals_lhs == [] else tier
+
+                global_tier=min(global_tier,tier)
+        return global_tier
