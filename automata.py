@@ -1,22 +1,43 @@
 import networkx as nx
 import matplotlib.pyplot as plt
-
+import numpy as np
 from collections import defaultdict
-
 class FiniteAutomaton:
-    def __init__(self, grammar):
+    def __init__(self, grammar, F, initial="S"):
         self.grammar = grammar
         self.transitions = defaultdict(list)
-        self.start_symbol = 'S'
+        self.rules=defaultdict(dict)
+        self.start_symbol = initial
+        self.F=F
+        self.convert()
         self._build_transitions()
 
     def _build_transitions(self):
-        for non_terminal, productions in self.grammar.items():
+        for non_terminal, productions in self.rules.items():
+            # print(non_terminal,productions)
             for production in productions:
-                if len(production) > 1:
-                    self.transitions[non_terminal].append((production[0], production[1:]))
-                else:
-                    self.transitions[non_terminal].append((production,))
+                symbol = productions[production]
+                self.transitions[non_terminal].append((production,symbol))
+
+
+    def convert(self):
+        for state,transition in self.grammar.items():
+            dic={}
+            if type(transition)==list:
+                for choice in transition:
+                    print(choice)
+                    upper = "".join([c for c in choice if c.isupper()])
+                    if not upper:
+                        dic[choice]=[choice]
+                        continue
+                    if choice.replace(upper,"") not in dic: 
+                        dic[choice.replace(upper,"")]=[upper]
+                        continue
+
+                    dic[choice.replace(upper,"")].append(upper)
+                self.rules[state]=dic
+            else:
+                self.rules=self.grammar
 
     def _can_reach(self, state, input_string):
         if not input_string:
@@ -27,67 +48,69 @@ class FiniteAutomaton:
                     return True
         return False
 
-    def can_generate(self, input_string):
+    def _can_generate(self, input_string):
         return self._can_reach(self.start_symbol, input_string)
-
-    def getAutomata(self):
-        
-        rules=self.grammar
+    
+    def canGenerate(self,input_string):
+        if self._can_generate(input_string):
+            print(f"The string '{input_string}' can be obtained from the grammar.")
+        else:
+            print(f"The string '{input_string}' cannot be obtained from the grammar.")
+    def getAutomata(self,title):
+        initial=self.start_symbol
         G = nx.DiGraph()
-        n=0
-        used_keys={}
-        node_colors=[]
+        edge_list = []
+        node_colors = {}
+
+        for node, edges in self.transitions.items():
+            print(node,edges)
+            if any(final in node for final in self.F):
+                node_colors[node]="red"
+            else:
+                node_colors[node]="skyblue"
+            
+            for edge in edges:
+                if type(edge[1]) == str:
+                    G.add_edge(node, edge[1], label=edge[0])
+                    edge_list.append(edge[0])
+                    if any(final in edge[1] for final in self.F):
+                        node_colors[edge[1]]="red"
+                    else:
+                        node_colors[edge[1]]="skyblue"
+                    continue
+
+                for choice in edge[1]:
+                    G.add_edge(node, choice, label=edge[0])
+                    edge_list.append(edge[0])
+
+                    if any(final in choice for final in self.F):
+                        node_colors[choice]="red"
+                    else:
+                        node_colors[choice]="skyblue"
+                
+
+        node_colors = node_colors.values()
+        pos = nx.spring_layout(G)
+
+        nx.draw(G, pos, with_labels=True, node_color=node_colors, font_size=12, font_weight="bold")
+        for i,edge in enumerate(G.edges()):
+            x0, y0 = pos[edge[0]]
+            x1, y1 = pos[edge[1]]
+            x, y = (x0 + x1) / 2, (y0 + y1) / 2
+                        
+            x -= 0.02
+            y += 0.08
 
             
+            plt.text(x, y, edge_list[i], bbox=dict(facecolor='white', alpha=0.5), horizontalalignment='center')
+        for i,node in enumerate(G.nodes()):
+            if initial in node:
+                x, y = pos[node]
+                plt.annotate("", xy=(x, y), xytext=(x-20, y-20),
+                 textcoords="offset points", ha="center", va="center",
+                 arrowprops=dict(arrowstyle="->", linewidth=2))
 
-        for node, edges in rules.items():
-            if node not in used_keys:
-                used_keys[node] = n
-                n +=  1
-                node_colors.append("lightblue")
-
-            for edge in edges:
-                uppercase = [x for x in edge if x.isupper()]
-
-                if uppercase:
-                    for char in uppercase:
-                        if char not in used_keys:
-                            used_keys[char] = n
-                            n +=  1
-                            node_colors.append("lightblue")
-
-                        
-                        if G.has_edge(f'{char}',f'{node}'):
-                            existing = G.get_edge_data(f'{char}',f'{node}')
-                            G.add_weighted_edges_from([(f'{node}', f'{char}',f"{existing['weight']} \n{edge}")])
-                        else:
-                            G.add_edge(f'{node}', f'{char}',weight=edge)
-
-
-                else:
-                    if edge not in used_keys:
-                        used_keys[edge] = n
-                        n +=  1
-                    G.add_edge(f'{node}', f'{edge}',weight=edge)
-                    node_colors.append("red")
-
-
-        G.add_edge(" ","S")
-
-        node_colors.append("white")
-
-        pos = {" ": (-10, 4), "S": (-1, 0)}
-
-        spring_pos = nx.spring_layout(G, pos=pos, k=10,fixed=[" ","S"],weight="weights")
-
-        pos.update(spring_pos)
-
-        for node in pos:
-            pos[node] = [pos[node][0] * 2, pos[node][1] * 2]
-
-        weights = nx.get_edge_attributes(G, 'weight')
-        nx.draw_networkx_nodes(G, pos, node_color=node_colors, node_size=1500)
-        nx.draw_networkx_edges(G, pos, node_size=1500)
-        nx.draw_networkx_labels(G, pos, font_weight='bold', font_size=12)
-        nx.draw_networkx_edge_labels(G, pos, edge_labels=weights)
+        
+        man = plt.get_current_fig_manager()
+        man.set_window_title(title)
         plt.show()
