@@ -1,5 +1,5 @@
 from src.lab3.tokenizer_v2 import Tokenizer
-from src.lab5.parser import parse
+from src.lab6.parser import parse
 import json
 t=Tokenizer("""
 Patient: 1
