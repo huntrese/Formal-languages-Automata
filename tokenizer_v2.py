@@ -5,28 +5,7 @@ TOKENS=[
     [r"\b[A-Za-z]+\b","LITERAL"],
     [r":","OPERATOR"],
     [r"[+-]?((\d+(\.\d+)?)|(\.\d+))","NUMERICAL"],
-    
-
-    
-
-
-
-
-
-
-
-
 ]
-
-# if token.isnumeric():
-#     each["type"]= "NUM"
-#     if "."in token:
-#         each["type"]="FLOAT"
-# elif ":" == token:
-#     each['type'] = "OPERATOR"
-# else:
-#     each['type'] = "IDENTIFIER"
-
 
 class Tokenizer:
     def __init__(self,string):

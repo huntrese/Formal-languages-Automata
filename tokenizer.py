@@ -41,8 +41,7 @@ BMI: 28.5
 DiabetesPedigreeFunction: 0.55 
 Age: 40 
 Outcome: 1
-Diagnosis: Type 2 diabetes
-Treatment: Metformin 500mg twice daily
+
 """)
 t.lines_plit()
 response=t.tokenize()
