@@ -1,8 +1,7 @@
-import grammarHelper
-from automata import FiniteAutomaton
-import nfa_dfa
-import language
-
+import src.lab1.grammarHelper as grammarHelper
+from src.lab1.automata import FiniteAutomaton
+import src.lab2.nfa_dfa as nfa_dfa
+import src.lab1.language as language
 
 
 grammar="""Variant 28

@@ -29,21 +29,3 @@ class Tokenizer:
 
                 line=line.replace(longest_match,"")
         return response
-t=Tokenizer("""
-Patient: 
-Pregnancies: 5 
-Glucose: 130 
-BloodPressure: 80.5 
-SkinThickness: 25 
-Insulin: 100 
-BMI: 28.5 
-DiabetesPedigreeFunction: 0.55 
-Age: 40 
-Outcome: 1
-# damn this is good
-""")
-t.lines_plit()
-response=t.tokenize()
-for i in response:
-    print(i)
-    
