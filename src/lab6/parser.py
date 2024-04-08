@@ -17,12 +17,16 @@ def parse(tokens):
 
     found_rules.sort()
     
+    print(tokens[0])
     index=0
     for found in found_rules:
         rule_Set=RULES[found[2]]
         size=len(rule_Set)
 
-        body.append({found[2]:tokens[index:index+size]})
+        start=tokens[index]['start']
+        end=tokens[index+size-1]['end']
+        body.append({found[2]:tokens[index:index+size],"start":start,"end":end})
+        
         index+=size
     assert index==len(tokens), "Not all tokens were parsed, check if all tokens belong to ruleset"
             

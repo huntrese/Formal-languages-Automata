@@ -1,4 +1,4 @@
-from src.lab3.tokenizer_v2 import Tokenizer
+from src.lab3.tokenizer_v3 import Tokenizer
 from src.lab6.parser import parse
 import json
 t=Tokenizer("""
@@ -12,7 +12,7 @@ BMI: 28.5
 DiabetesPedigreeFunction: 0.55 
 Age: 40 
 Outcome: 1
-#i dont like this
+#   i dont like this
 
 """)
 t.lines_plit()
