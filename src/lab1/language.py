@@ -14,6 +14,7 @@ class Language():
         self.VN=VN
         self.VT=VT
         self.F=F
+        self.words=[] 
 
     def generate_word(self, number,initial = "S"):
         
