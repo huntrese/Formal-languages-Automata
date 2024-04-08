@@ -22,7 +22,8 @@ The journey of developing a regex word creator has been an enlightening experien
 
 ## Implementation description
 ### Variant 1:
-![image](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/337cd72e-aef2-4535-96ea-2220d611257d)
+![image](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/a349e2c4-2beb-4ac5-936f-30a281b2cec0)
+
 Due to the big similarity between this and the first laboratory I decided to implement a translator between the given regex and the grammar of the first laboratory, everything else is highly similar.
 ```
 import src.lab1.grammarHelper as grammarHelper
