@@ -1,7 +1,7 @@
 import src.lab1.grammarHelper as grammarHelper
 
 import src.lab1.language as language
-
+from collections import defaultdict
 variant="""
 (a|b)(c|d)E+G?
 P(Q|R|S)T(UV|W|X)*Z+
@@ -12,7 +12,12 @@ REGEX = [x for x in variant.split("\n") if x]
 terminals="Sabcdefghijklmnoprtqwxyz"
 nonterminals=terminals.upper()
 print(REGEX)
-for expr in REGEX:
+mapping={}
+for index,expr in enumerate(REGEX):
+    print(expr)
+    mapping[index]=defaultdict(dict)
+    mapping[index]={x:x.lower() for x in expr if x.isalpha()}
+    print(mapping)
     expr=expr.lower()
     final="\n"
 
@@ -67,15 +72,11 @@ for expr in REGEX:
             final+=f'{nonterminals[starting]} → {node}{nonterminals[starting+1]}\n'
             VT.append(node)
         starting+=1
+
     
     final+=f'{nonterminals[starting]} →  \n'
 
-    # print("Varianta 20:")
-    # print("VN= {",f"{', '.join(list(nonterminals[:starting+1]))}","},")
-    # print("VT= {",f"{', '.join(VT)}","},")
-    # print("P={")
-    # print(final)
-    # print("}")
+
     lb="{"
     rb="}"
     grammar=f"Varianta 20:\n VN= {lb}{', '.join(list(nonterminals[:starting+1]))}{rb},\n VT= {lb}{', '.join(VT)}{rb},\n P={lb}{final}{rb}"
@@ -84,7 +85,7 @@ for expr in REGEX:
 
 
 
-for grammar in grammars:
+for index,grammar in enumerate(grammars):
     rules, VN, VT, F = grammarHelper.grammar_to_language(grammar)
 
 
@@ -92,4 +93,8 @@ for grammar in grammars:
     lang=language.Language(rules,VN,VT,F)
 
     lang.generate_word(5,'S')
-    print("Generated words: ",lang.words)
+    for word in lang.words:
+        for key,value in mapping[index].items():
+            if value!=key:
+                word = word.replace(value,key)
+        print("Generated words: ",word)
