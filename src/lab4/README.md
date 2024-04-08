@@ -16,223 +16,494 @@
 
     c. **Bonus point**: write a function that will show sequence of processing regular expression (like, what you do first, second and so on)
 
+## Theory:
+
+The journey of developing a regex word creator has been an enlightening experience, offering deep insights into the complexities and nuances of regular expressions (regex). Regular expressions are a powerful tool used across various programming languages, including R, Python, C, C++, Perl, Java, and JavaScript, for processing and mining unstructured text data. They are particularly useful in applications such as search engines, lexical analysis, spam filtering, and text editors
+
 ## Implementation description
-## V1
-I have created the following lexer on the basis of the ELSD Project:
+### Variant 1:
+![image](https://github.com/huntrese/Formal-languages-Automata/assets/53612811/337cd72e-aef2-4535-96ea-2220d611257d)
+Due to the big similarity between this and the first laboratory I decided to implement a translator between the given regex and the grammar of the first laboratory, everything else is highly similar.
 ```
-class Tokenizer:
-    def __init__(self,string):
-        self._string=string
+import src.lab1.grammarHelper as grammarHelper
 
-    def lines_plit(self):
-        self._string=self._string.split("\n")
-    def tokenize(self):
+import src.lab1.language as language
+from collections import defaultdict
+variant="""
+(a|b)(c|d)E+G?
+P(Q|R|S)T(UV|W|X)*Z+
+1(0|1)*2(3|4)^(5)36
+"""
+grammars=[]
+REGEX = [x for x in variant.split("\n") if x]
+terminals="Sabcdefghijklmnoprtqwxyz"
+nonterminals=terminals.upper()
+print(REGEX)
+mapping={}
+for index,expr in enumerate(REGEX):
+    print(expr)
+    mapping[index]=defaultdict(dict)
+    mapping[index]={x:x.lower() for x in expr if x.isalpha()}
+    print(mapping)
+    expr=expr.lower()
+    final="\n"
 
-        response=[]
+    starting=0
 
-        for line in self._string:
+    expr=expr.replace("("," ").replace(")"," ").replace("*"," * ").replace("^"," ^ ").replace("+"," + ").replace("?"," ? ")
+    expr=[x for x in expr.split(" ") if x]
+    VT=[]
+    for i,node in enumerate(expr):
+        node=str(node)
+        if "|" in node:
+            choices=node.split("|")
+            for choice in choices:
+                final+=f'{nonterminals[starting]} → {choice}{nonterminals[starting+1]}\n'
+                if choice not in VT:
+                    VT.append(choice)
+        elif node == "+":
+            final+=f'{nonterminals[starting]} → {nonterminals[starting-1]}\n'
+            starting-=1
+
+        elif node == "*":
+            final+=f'{nonterminals[starting-1]} → {nonterminals[starting]}\n'
+            final+=f'{nonterminals[starting]} → {nonterminals[starting-1]}\n'
+            starting-=1
+
+        elif node == "?":
+            final+=f'{nonterminals[starting-1]} → {nonterminals[starting]}\n'
+            starting-=1
+        elif node == "^":
+            times = int(expr[i+1])
             
-            line=line.replace("\n","").replace(" ","")
-            lexemes=line.split(":")
-            if lexemes == ['']:
-                continue
-            lexemes.insert(1,":")
-            for token in lexemes:
-                each = {}
-                if token.isnumeric():
-                    each["type"]= "NUM"
-                    if "."in token:
-                        each["type"]="FLOAT"
-                elif ":" == token:
-                    each['type'] = "OPERATOR"
-                else:
-                    each['type'] = "IDENTIFIER"
-                each["value"] = token
+            for j in range(times-1):
+
+                previous=[x for x in final.split("\n") if x]
+                previous = [x for x in previous if (x[0]==nonterminals[starting-1+j])]
+                s=""
                 
-                response.append(each)
-        return response
-```
-The way the program works is that when a tokenizer class is instantiated a private parameter string is updated to contain the text that needs to be processed by the lexer. afterwards the text is split into each separate line, whitespace is dropped. 
+                for x in previous:
 
-Our DSL looks like:
+                    s+=nonterminals[starting+j]
+                    s+=x[1:-1]
+                    s+=nonterminals[starting+j+1]
+                    s+="\n"
+
+                final+=s
+            starting+= times-2
+
+
+        elif node.isalnum():
+            if expr[i-1] == "^":
+                continue
+            final+=f'{nonterminals[starting]} → {node}{nonterminals[starting+1]}\n'
+            VT.append(node)
+        starting+=1
+
+    
+    final+=f'{nonterminals[starting]} →  \n'
+
+
+    lb="{"
+    rb="}"
+    grammar=f"Varianta 20:\n VN= {lb}{', '.join(list(nonterminals[:starting+1]))}{rb},\n VT= {lb}{', '.join(VT)}{rb},\n P={lb}{final}{rb}"
+    print(grammar)
+    grammars.append(grammar)
+
+
+
+for index,grammar in enumerate(grammars):
+    rules, VN, VT, F = grammarHelper.grammar_to_language(grammar)
+
+
+
+    lang=language.Language(rules,VN,VT,F)
+
+    lang.generate_word(5,'S')
+    for word in lang.words:
+        for key,value in mapping[index].items():
+            if value!=key:
+                word = word.replace(value,key)
+        print("Generated words: ",word)
 ```
-Age: 80
+This is the entire code, now let us proceed to analyse it in more detail by parts.
 ```
-and so on for different attributes of a patient, we can easily notice a pattern of LITERAL("Age") OPERATOR(":") NUMBER("80") Which holds true for most of the attributes except ones with String values. 
-Ex:
+variant="""
+(a|b)(c|d)E+G?
+P(Q|R|S)T(UV|W|X)*Z+
+1(0|1)*2(3|4)^(5)36
+"""
 ```
-Pregnancies: 5 
-Glucose: 130 
-BloodPressure: 80 
-SkinThickness: 25 
-Insulin: 100 
-BMI: 28.5 
-DiabetesPedigreeFunction: 0.55 
-Age: 40
+This the code representation of the given regex variant
+
+```
+REGEX = [x for x in variant.split("\n") if x]
+for index,expr in enumerate(REGEX):
+    mapping[index]=defaultdict(dict)
+    mapping[index]={x:x.lower() for x in expr if x.isalpha()}
+    expr=expr.lower()
+    final="\n"
+
+    starting=0
+
+    expr=expr.replace("("," ").replace(")"," ").replace("*"," * ").replace("^"," ^ ").replace("+"," + ").replace("?"," ? ")
+    expr=[x for x in expr.split(" ") if x]
+```
+in the code above i split the variant by lines, having a separation in each regex item. then i identify 'operations' - creation of nodes '( & )' |*+? etc, I created some space around them and split each line by space. this effectively, separates the given regex item into nodes ex:
+
+Given reges:
+```
+(a|b)(c|d)E+G?
+```
+becomes:
+```
+['a|b', 'c|d', 'e', '+', 'g', '?']
+```
+THis splits the regex into nodes, both by keeping paranthesis for complex nodes, and keeping in mind operations, what follow is parsing this structure for each specific type of operation and implement its behavior in a grammar:
+
+```
+for i,node in enumerate(expr):
+        node=str(node)
+        if "|" in node:
+            choices=node.split("|")
+            for choice in choices:
+                final+=f'{nonterminals[starting]} → {choice}{nonterminals[starting+1]}\n'
+                if choice not in VT:
+                    VT.append(choice)
+        elif node == "+":
+            final+=f'{nonterminals[starting]} → {nonterminals[starting-1]}\n'
+            starting-=1
+
+        elif node == "*":
+            final+=f'{nonterminals[starting-1]} → {nonterminals[starting]}\n'
+            final+=f'{nonterminals[starting]} → {nonterminals[starting-1]}\n'
+            starting-=1
+
+        elif node == "?":
+            final+=f'{nonterminals[starting-1]} → {nonterminals[starting]}\n'
+            starting-=1
+        elif node == "^":
+            times = int(expr[i+1])
+            
+            for j in range(times-1):
+
+                previous=[x for x in final.split("\n") if x]
+                previous = [x for x in previous if (x[0]==nonterminals[starting-1+j])]
+                s=""
+                
+                for x in previous:
+
+                    s+=nonterminals[starting+j]
+                    s+=x[1:-1]
+                    s+=nonterminals[starting+j+1]
+                    s+="\n"
+
+                final+=s
+            starting+= times-2
+
+
+        elif node.isalnum():
+            if expr[i-1] == "^":
+                continue
+            final+=f'{nonterminals[starting]} → {node}{nonterminals[starting+1]}\n'
+            VT.append(node)
+        starting+=1
+
+    
+    final+=f'{nonterminals[starting]} →  \n'
+```
+Here I handled all of the operators, transforming them into grammar in a variable called final
+
+```
+lb="{"
+rb="}"
+grammar=f"Varianta 20:\n VN= {lb}{', '.join(list(nonterminals[:starting+1]))}{rb},\n VT= {lb}{', '.join(VT)}{rb},\n P={lb}{final}{rb}"
+```
+Here I transform the resulted transitions in the format required by the grammar in lab 1 this is the result:
+```
+Varianta 20:
+ VN= {S, A, B, C, D},
+ VT= {a, b, c, d, e, g},
+ P={
+S → aA
+S → bA
+A → cB
+A → dB
+B → eC
+C → B
+C → gD
+C → D
+D →  
+}
+```
+Yes, there are epsilon productions, mostly for specifing the end of the regex.
+
 ```
 
-This means that with certain exceptions our Language has 3 tokens in each line: LITERAL, OPERATOR, (NUMERICAL|STRING)
-I split each line based on the operator ':' then insert it into the resulted list. This transforms 
+
+for index,grammar in enumerate(grammars):
+    rules, VN, VT, F = grammarHelper.grammar_to_language(grammar)
+
+
+
+    lang=language.Language(rules,VN,VT,F)
+
+    lang.generate_word(5,'S')
+    for word in lang.words:
+        for key,value in mapping[index].items():
+            if value!=key:
+                word = word.replace(value,key)
+        print("Generated words: ",word)
 ```
-Age: 80
+Then i iterate through all of the resulted grammars and call the word generator based on the lab 1 code. 
+I also map the uppercase letters present in the regex back into uppercase at the end, since they conflict with Nonterminals in the grammar, they were made lowercase in the beginning.
+
+This is how the output of the program looks like:
 ```
-into 
+Generated words:  bdEEEEG
+Generated words:  bcEEG
+Generated words:  adEG
+Generated words:  acEG
+Generated words:  bdEG
 ```
-['Age',':','80']
 ```
-Based on this newly created list I classify each resulted token into its type and get this:
+Generated words:  PSTWWXXZ
+Generated words:  PQTXWZ
+Generated words:  PRTZ
+Generated words:  PQTWZ
+Generated words:  PRTXZ
+Generated words:  PRTUVZZZ
 ```
-{'type': 'IDENTIFIER', 'value': 'Age'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '40'}
+```
+Generated words:  123344336
+Generated words:  1023444436
+Generated words:  1023344336
+Generated words:  1024344336
+Generated words:  1023333336
+Generated words:  1123433436
+```
+Clearly, for each variant the respective words were generated, here is the steps taken to do so:
 ```
 
-Example usage of the Lexer:
-```
-t=Tokenizer("""
-Patient: 
-Pregnancies: 5 
-Glucose: 130 
-BloodPressure: 80 
-SkinThickness: 25 
-Insulin: 100 
-BMI: 28.5 
-DiabetesPedigreeFunction: 0.55 
-Age: 40 
-Outcome: 1
+S -> bA
+ -> bdB
+ -> bdeC
+ -> bdegD
+ -> bdeg
 
-""")
-t.lines_plit()
-response=t.tokenize()
-for i in response:
-    print(i)
-```
-This is the produced Output:
-```
-{'type': 'IDENTIFIER', 'value': 'Patient'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'IDENTIFIER', 'value': ''}
-{'type': 'IDENTIFIER', 'value': 'Pregnancies'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '5'}
-{'type': 'IDENTIFIER', 'value': 'Glucose'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '130'}
-{'type': 'IDENTIFIER', 'value': 'BloodPressure'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '80'}
-{'type': 'IDENTIFIER', 'value': 'SkinThickness'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '25'}
-{'type': 'IDENTIFIER', 'value': 'Insulin'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '100'}
-{'type': 'IDENTIFIER', 'value': 'BMI'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'IDENTIFIER', 'value': '28.5'}
-{'type': 'IDENTIFIER', 'value': 'DiabetesPedigreeFunction'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'IDENTIFIER', 'value': '0.55'}
-{'type': 'IDENTIFIER', 'value': 'Age'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '40'}
-{'type': 'IDENTIFIER', 'value': 'Outcome'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUM', 'value': '1'}
-```
+S -> aA
+ -> adB
+ -> adeC
+ -> adegD
+ -> adeg
 
-## V2
-Additionally I have created a v2 of the lexer that identifies each token dynamically, not just based on the len 3, and can be easily extended for a more general purpose DSL     
-```
-class Tokenizer:
-    def __init__(self,string):
-        self._string=string
+S -> bA
+ -> bdB
+ -> bdeC
+ -> bdeD
+ -> bde
 
-    def lines_plit(self):
-        self._string=self._string.split("\n")
-    def tokenize(self):
+S -> aA
+ -> adB
+ -> adeC
+ -> adeB
+ -> adeeC
+ -> adeeB
+ -> adeeeC
+ -> adeeegD
+ -> adeeeg
 
-        response=[]
+S -> aA
+ -> adB
+ -> adeC
+ -> adeB
+ -> adeeC
+ -> adeegD
+ -> adeeg
 
-        for line in self._string:
-            for regex, token in TOKENS:
-                match=re.findall(regex,line)
-                if not match:
-                    continue
-                match=match[0] if type(match[0])==tuple else match
+S -> bA
+ -> bcB
+ -> bceC
+ -> bceB
+ -> bceeC
+ -> bceegD
+ -> bceeg
+Generated words:  bdEG
+Generated words:  adEG
+Generated words:  bdE
+Generated words:  adEEEG
+Generated words:  adEEG
+Generated words:  bcEEG
 
-                longest_match = max(match, key=lambda match: len(match))                
-                response.append({"type":token,"value":longest_match})
+S -> pA
+ -> prB
+ -> prtC
+ -> prtxD
+ -> prtxzE
+ -> prtxzD
+ -> prtxzzE
+ -> prtxzz
 
-                line=line.replace(longest_match,"")
-        return response
-```
+S -> pA
+ -> psB
+ -> pstC
+ -> pstwD
+ -> pstwzE
+ -> pstwz
 
-This one works by sequentially identifying tokens in the given string. This emans that the order in which tokens are captured is very important and will influence the end result for complex scenarios. But it allows adding new types of tokens in a much easier way compared to the previous one.
-These are the tokens for the DSL:
-```
-TOKENS=[
-    [r"\A\#.*$", "COMMENT"],
-    [r"\b[A-Za-z]+\b","LITERAL"],
-    [r":","OPERATOR"],
-    [r"[+-]?((\d+(\.\d+)?)|(\.\d+))","NUMERICAL"],
-]
-```
+S -> pA
+ -> prB
+ -> prtC
+ -> prtwD
+ -> prtwzE
+ -> prtwzD
+ -> prtwzC
+ -> prtwzwD
+ -> prtwzwzE
+ -> prtwzwz
 
-Example Usage:
-```t=Tokenizer("""
-Patient: 
-Pregnancies: 5 
-Glucose: 130 
-BloodPressure: 80.5 
-SkinThickness: 25 
-Insulin: 100 
-BMI: 28.5 
-DiabetesPedigreeFunction: 0.55 
-Age: 40 
-Outcome: 1
-# damn this is good
-""")
-t.lines_plit()
-response=t.tokenize()
-for i in response:
-    print(i)
-```
-Output:
-```
-{'type': 'LITERAL', 'value': 'Patient'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'LITERAL', 'value': 'Pregnancies'}  
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '5'}
-{'type': 'LITERAL', 'value': 'Glucose'}      
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '130'}        
-{'type': 'LITERAL', 'value': 'BloodPressure'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '80.5'}
-{'type': 'LITERAL', 'value': 'SkinThickness'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '25'}
-{'type': 'LITERAL', 'value': 'Insulin'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '100'}
-{'type': 'LITERAL', 'value': 'BMI'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '28.5'}
-{'type': 'LITERAL', 'value': 'DiabetesPedigreeFunction'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '0.55'}
-{'type': 'LITERAL', 'value': 'Age'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '40'}
-{'type': 'LITERAL', 'value': 'Outcome'}
-{'type': 'OPERATOR', 'value': ':'}
-{'type': 'NUMERICAL', 'value': '1'}
-{'type': 'COMMENT', 'value': '# damn this is good'}
+S -> pA
+ -> psB
+ -> pstC
+ -> pstwD
+ -> pstwC
+ -> pstwD
+ -> pstwC
+ -> pstwxD
+ -> pstwxC
+ -> pstwxwD
+ -> pstwxwC
+ -> pstwxwD
+ -> pstwxwzE
+ -> pstwxwzD
+ -> pstwxwzC
+ -> pstwxwzuvD
+ -> pstwxwzuvC
+ -> pstwxwzuvuvD
+ -> pstwxwzuvuvC
+ -> pstwxwzuvuvuvD
+ -> pstwxwzuvuvuvC
+ -> pstwxwzuvuvuvxD
+ -> pstwxwzuvuvuvxC
+ -> pstwxwzuvuvuvxwD
+ -> pstwxwzuvuvuvxwzE
+ -> pstwxwzuvuvuvxwzD
+ -> pstwxwzuvuvuvxwzC
+ -> pstwxwzuvuvuvxwzuvD
+ -> pstwxwzuvuvuvxwzuvzE
+ -> pstwxwzuvuvuvxwzuvz
+
+S -> pA
+ -> psB
+ -> pstC
+ -> pstuvD
+ -> pstuvC
+ -> pstuvuvD
+ -> pstuvuvC
+ -> pstuvuvxD
+ -> pstuvuvxzE
+ -> pstuvuvxz
+
+S -> pA
+ -> pqB
+ -> pqtC
+ -> pqtuvD
+ -> pqtuvzE
+ -> pqtuvzD
+ -> pqtuvzC
+ -> pqtuvzwD
+ -> pqtuvzwC
+ -> pqtuvzwuvD
+ -> pqtuvzwuvzE
+ -> pqtuvzwuvz
+Generated words:  PRTXZZ
+Generated words:  PSTWZ
+Generated words:  PRTWZWZ
+Generated words:  PSTWXWZUVUVUVXWZUVZ
+Generated words:  PSTUVUVXZ
+Generated words:  PQTUVZWUVZ
+
+S -> 1A
+ -> 11B
+ -> 112C
+ -> 1123D
+ -> 11233E
+ -> 112334F
+ -> 1123344G
+ -> 11233443H
+ -> 1123344336I
+ -> 1123344336
+
+S -> 1A
+ -> 1B
+ -> 1A
+ -> 1B
+ -> 12C
+ -> 124D
+ -> 1243E
+ -> 12433F
+ -> 124333G
+ -> 1243333H
+ -> 124333336I
+ -> 124333336
+
+S -> 1A
+ -> 1B
+ -> 12C
+ -> 124D
+ -> 1244E
+ -> 12444F
+ -> 124444G
+ -> 1244444H
+ -> 124444436I
+ -> 124444436
+
+S -> 1A
+ -> 11B
+ -> 112C
+ -> 1123D
+ -> 11234E
+ -> 112343F
+ -> 1123434G
+ -> 11234343H
+ -> 1123434336I
+ -> 1123434336
+
+S -> 1A
+ -> 1B
+ -> 1A
+ -> 11B
+ -> 11A
+ -> 111B
+ -> 1112C
+ -> 11124D
+ -> 111243E
+ -> 1112434F
+ -> 11124343G
+ -> 111243433H
+ -> 11124343336I
+ -> 11124343336
+
+S -> 1A
+ -> 1B
+ -> 12C
+ -> 124D
+ -> 1243E
+ -> 12434F
+ -> 124343G
+ -> 1243434H
+ -> 124343436I
+ -> 124343436
+Generated words:  1123344336
+Generated words:  124333336
+Generated words:  124444436
+Generated words:  1123434336
+Generated words:  11124343336
+Generated words:  124343436
+
 ```
 ## Conclusions 
-The development of this lexer for a Domain-Specific Language (DSL) tasked with analyzing medical results represents a significant milestone in the process of creating a comprehensive system for interpreting and processing medical data. This lexer is a crucial component in the broader context of compiler design, It constitutes the base upon which the parser and AST will be later built. When using the lexer, attention must be drawn towards the order of each type of token in TOKENS list.
+The development of this regex word creator, has helped in understanding the intricacies behind simple regex instructions, and the way differnt functions work. The process of creating a regex word creator has highlighted the importance of starting with simple patterns and gradually adding complexity. This approach, combined with testing incrementally, ensures that the regex patterns are accurate and efficient. 
 
 
 
