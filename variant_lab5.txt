@@ -1,0 +1,24 @@
+variant="""Variant 20
+VN={S, A, B, C, D},
+VT={a, b}, 
+P={ 
+    S → aB
+    S → bA
+    S → A
+    A → B
+    A → Sa
+    A → bBA
+    A → b
+    B → b
+    B → bS
+    B → aD
+    B →
+    D → AA
+    C → BA  
+    A → d    
+    A → aB   
+    B → bC    
+    C → cA
+    C → aS
+}
+"""
